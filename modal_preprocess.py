@@ -56,6 +56,8 @@ def retain_columns(df):
         if row[colname] not in types:
             df = df.drop(index)
             print(index)
+    
+    df.to_csv("preprocessed_sanjose_policecalls2023.csv", index=True)
 
     return df
 
