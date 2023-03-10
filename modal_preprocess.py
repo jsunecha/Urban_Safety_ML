@@ -13,7 +13,6 @@ image=(modal.Image.debian_slim()
     .apt_install("curl")
     .run_commands(
         "apt-get update",
-        "curl -O https://raw.githubusercontent.com/TruthQuestWeb/ml-model/main/train.csv",
     ).pip_install(
         "pandas",
         "scikit-learn",
@@ -24,40 +23,43 @@ image=(modal.Image.debian_slim()
 
 stub = modal.Stub(image=image)  
 
-@stub.function(timeout=10000)
+@stub.function(timeout=86400)
 def retain_columns(df):
     col = ("ID", "INCIDENT", "DATE", "TIME", "LOCATION", "ADDRESS","TYPE", "CATEGORY", "DESCRIPTION", "CITY", "STATE")
     for c in df.columns:
         c = c.upper()
-
         #If the string has any of the words in col, keep it
         if any(x in c for x in col):
             continue
         else:
             df = df.drop(c, axis=1)
-    
     #Find the column with TYPE within the name, and find all unique values
     types = list()
     colname = ""
     for c in df.columns:
         c = c.upper()
         if "TYPE" in c and "CODE" not in c:
-            print(df[c].unique())
+            #print(df[c].unique())
             types = list(df[c].unique())
             colname = c
 
-
-    
-    print(types)
     #Drop all rows that have a type that is not in the list
+    typeslist = ["BURGLARY", "DISTURBANCE", "THEFT", "STOLEN", "SUSPICIOUS", "ASSAULT", "MISCHIEF", "BATTERY", "THREATS", "STAB", "FIGHT", "ROBBERY", "DISTURBANCE", "HATE", "KIDNAPPING"]
+    for t in types:
+        #If t is not similar to typeslist, drop it
+        if not any(x in t for x in typeslist):
+            #remove from types
+            types.remove(t)
     
-    
-
-    time.sleep(10)
+    #Go through the dataframe and drop all rows that have a type that is not in the list
+    for index, row in df.iterrows():
+        if row[colname] not in types:
+            df = df.drop(index)
+            print(index)
 
     return df
 
-@stub.function(timeout=10000,secret=modal.Secret.from_name("my-google-maps"))
+@stub.function(timeout=86400,secret=modal.Secret.from_name("my-google-maps"))
 def get_coords(row):
     import googlemaps
 
@@ -76,16 +78,16 @@ def get_coords(row):
 
 @stub.local_entrypoint()
 def main():
-    sanjose = pd.read_csv("sanjose_policecalls2023.csv")
-    sanjose = retain_columns.call(sanjose)
+    df = pd.read_csv("sanjose_policecalls2023.csv")
+    df = retain_columns.call(df)
 
     #Convert df to list
-    list_sanjose = sanjose.values.tolist()
+    list_df = df.values.tolist()
 
     # #Adding the new columns
-    columns_sanjose = sanjose.columns.tolist()
-    columns_sanjose.append("LAT")
-    columns_sanjose.append("LNG")
+    columns_df = df.columns.tolist()
+    columns_df.append("LAT")
+    columns_df.append("LNG")
 
     templist = list()
 
@@ -93,29 +95,30 @@ def main():
     #This is to avoid overloading the API
     counter = 1
     for i in range(50, 0, -1):
-        if len(list_sanjose)%i == 0:
+        if len(list_df)%i == 0:
             counter = i
             break
 
-    for x in range(0, len(list_sanjose)-counter, counter):
-        templist += list(get_coords.map(list_sanjose[x:x+counter]))
+    for x in range(0, len(list_df)-counter, counter):
+        templist += list(get_coords.map(list_df[x:x+counter]))
         print(len(templist))
         time.sleep(1)
+
     
     #print(len(templist[0]))
     time.sleep(3)
 
-    sanjose = pd.DataFrame(templist, columns=columns_sanjose)
+    df = pd.DataFrame(templist, columns=columns_df)
         
 
-    print(sanjose.columns)
+    print(df.columns)
 
     #Print how many rows and columns
-    print(sanjose.shape)
+    print(df.shape)
 
     #Display the first 5 rows
-    print(sanjose.head())
+    print(df.head())
 
     #Save the dataframe to a csv file
-    sanjose.to_csv("updated_sanjose_policecalls2023.csv", index=True)
+    df.to_csv("updated_sanjose_policecalls2023.csv", index=True)
 
