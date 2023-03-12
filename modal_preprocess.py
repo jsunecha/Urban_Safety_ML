@@ -56,8 +56,6 @@ def retain_columns(df):
         if row[colname] not in types:
             df = df.drop(index)
             print(index)
-    
-    df.to_csv("preprocessed_sanjose_policecalls2023.csv", index=True)
 
     return df
 
@@ -81,7 +79,10 @@ def get_coords(row):
 @stub.local_entrypoint()
 def main():
     df = pd.read_csv("sanjose_policecalls2023.csv")
+
+    
     df = retain_columns.call(df)
+    df.to_csv("preprocessed_sanjose_policecalls2023.csv", index=True)
 
     #Convert df to list
     list_df = df.values.tolist()

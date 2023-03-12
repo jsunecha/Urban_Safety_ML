@@ -13,6 +13,7 @@ import time
 
 
 def retain_columns(df):
+    #"CDTS","EID","START_DATE","CALL_NUMBER","PRIORITY","REPORT_DATE","OFFENSE_DATE","OFFENSE_TIME","CALLTYPE_CODE","CALL_TYPE","FINAL_DISPO_CODE","FINAL_DISPO","COMMON_PLACE_NAME","ADDRESS","CITY","STATE"
     col = ("ID", "INCIDENT", "DATE", "TIME", "LOCATION", "ADDRESS","TYPE", "CATEGORY", "DESCRIPTION", "CITY", "STATE")
     for c in df.columns:
         c = c.upper()
@@ -21,6 +22,7 @@ def retain_columns(df):
             continue
         else:
             df = df.drop(c, axis=1)
+
     #Find the column with TYPE within the name, and find all unique values
     types = list()
     colname = ""
@@ -41,6 +43,7 @@ def retain_columns(df):
     
     #Go through the dataframe and drop all rows that have a type that is not in the list
     for index, row in df.iterrows():
+        #"CALL_TYPE"
         if row[colname] not in types:
             df = df.drop(index)
             print(index)
@@ -64,8 +67,16 @@ def get_coords(row):
     print(row)
     return row
 
+def partition(df):
+    #Create a new folder using the name of the csv file
+
+    pass
+
+
 def main():
+
     df = pd.read_csv("sanjose_policecalls2023.csv")
+    
     df = retain_columns(df)
     print(df.shape)
 
