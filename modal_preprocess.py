@@ -1,6 +1,9 @@
 import os
+import time
+
 import pandas as pd
 import numpy as np
+
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
@@ -26,12 +29,12 @@ stub = modal.Stub(image=image)
 
 @stub.function(timeout=10000)
 def retain_columns(df):
-    col = ("ID", "INCIDENT", "DATE", "TIME", "LOCATION", "ADDRESS","TYPE", "CATEGORY", "DESCRIPTION", "CITY", "STATE")
+    col = ("ID", "INCIDENT", "DATE", "TIME", "LOCATION", "ADDRESS","REPORT", "TYPE", "CATEGORY", "DESCRIPTION", "CITY", "STATE", "LATITUDE","LONGITUDE")
     for c in df.columns:
-        c = c.upper()
+        temp_c = c.upper()
 
         #If the string has any of the words in col, keep it
-        if any(x in c for x in col):
+        if any(x in temp_c for x in col):
             continue
         else:
             df = df.drop(c, axis=1)
@@ -40,20 +43,37 @@ def retain_columns(df):
     types = list()
     colname = ""
     for c in df.columns:
-        c = c.upper()
-        if "TYPE" in c and "CODE" not in c:
-            print(df[c].unique())
-            types = list(df[c].unique())
-            colname = c
-
-
+        typeslist = ["BURGLARY", "THEFT", "STOLEN", "SUSPICIOUS", "ASSAULT", "MISCHIEF", "BATTERY", "THREATS", "STAB", "FIGHT", "ROBBERY", "DISTURBANCE", "HATE", "KIDNAPPING"]
+        #Iterate through the first 100 rows to see if they have anything from typeslist
+        for i in range(0, 100):
+            try:
+                temp_t = df[c].iloc[i].upper()
+                if any(x in temp_t for x in typeslist):
+                    types = list(df[c].unique())
+                    colname = c
+                    break
+            except:
+                continue
     
-    print(types)
-    #Drop all rows that have a type that is not in the list
+        #Drop all rows that have a type that is not in the list
+    final_types = list()
+    for t in types:
+        #If t is not similar to typeslist, drop it
+        print("TEMP", temp_t)
+        temp_t = t.upper()
+        if any(x in temp_t for x in typeslist):
+            #remove from types
+            final_types.append(t)
     
-    
-
-    time.sleep(10)
+    print("Remaining Types")
+    print(final_types)
+    #Go through the dataframe and drop all rows that have a type that is not in the list
+    for index, row in df.iterrows():
+        if row[colname] not in final_types:
+            df = df.drop(index)
+            
+    #Drop all rows that have a NaN value
+    df = df.dropna()
 
     return df
 
@@ -76,8 +96,40 @@ def get_coords(row):
 
 @stub.local_entrypoint()
 def main():
-    sanjose = pd.read_csv("sanjose_policecalls2023.csv")
-    sanjose = retain_columns.call(sanjose)
+
+    # record the start time
+    start_time = time.time()
+
+    distributed_df = []
+
+    original_df = pd.read_csv("san_francisco.csv")
+    print(original_df.shape)
+    time.sleep(3)
+    #Split the length of the dataframe into 100 parts
+    for i in range(0, 100):
+        distributed_df.append(original_df.iloc[i*len(original_df)//100:(i+1)*len(original_df)//100])
+
+
+    new_distributed_df = []
+    for results in retain_columns.map(distributed_df):
+        new_distributed_df.append(results)
+
+
+    #Add all the dataframes together from distributed_df list
+    df = pd.concat(new_distributed_df, ignore_index=False)
+    print(df.shape)
+    df.to_csv("updated_sanfrancisco_policecalls2023.csv", index=True)
+
+
+    # record the end time
+    end_time = time.time()
+
+    # calculate the elapsed time
+    elapsed_time = end_time - start_time
+
+    # print the elapsed time
+    print(f"Elapsed time: {elapsed_time} seconds")
+    return
 
     #Convert df to list
     list_sanjose = sanjose.values.tolist()
@@ -118,4 +170,5 @@ def main():
 
     #Save the dataframe to a csv file
     sanjose.to_csv("updated_sanjose_policecalls2023.csv", index=True)
+
 

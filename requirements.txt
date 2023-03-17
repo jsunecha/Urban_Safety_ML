@@ -1,0 +1,8 @@
+pandas
+numpy
+scikit-learn
+googlemaps
+python-dotenv
+
+#If you are using modal, uncomment the following line
+#modal-client
