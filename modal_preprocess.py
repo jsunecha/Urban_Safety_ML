@@ -27,7 +27,7 @@ image=(modal.Image.debian_slim()
 
 stub = modal.Stub(image=image)  
 
-@stub.function(timeout=10000)
+@stub.function()
 def retain_columns(df):
     col = ("ID", "INCIDENT", "DATE", "TIME", "LOCATION", "ADDRESS","REPORT", "TYPE", "CATEGORY", "DESCRIPTION", "CITY", "STATE", "LATITUDE","LONGITUDE")
     for c in df.columns:
@@ -42,6 +42,7 @@ def retain_columns(df):
     #Find the column with TYPE within the name, and find all unique values
     types = list()
     colname = ""
+    isFound = False
     for c in df.columns:
         typeslist = ["BURGLARY", "THEFT", "STOLEN", "SUSPICIOUS", "ASSAULT", "MISCHIEF", "BATTERY", "THREATS", "STAB", "FIGHT", "ROBBERY", "DISTURBANCE", "HATE", "KIDNAPPING"]
         #Iterate through the first 100 rows to see if they have anything from typeslist
@@ -49,24 +50,29 @@ def retain_columns(df):
             try:
                 temp_t = df[c].iloc[i].upper()
                 if any(x in temp_t for x in typeslist):
+                    print("FOUND", c)
                     types = list(df[c].unique())
                     colname = c
+                    isFound = True
                     break
             except:
                 continue
+        if isFound:
+            break
     
         #Drop all rows that have a type that is not in the list
     final_types = list()
     for t in types:
         #If t is not similar to typeslist, drop it
-        print("TEMP", temp_t)
-        temp_t = t.upper()
-        if any(x in temp_t for x in typeslist):
-            #remove from types
-            final_types.append(t)
+        try:
+            print("TEMP", t)
+            temp_t = t.upper()
+            if any(x in temp_t for x in typeslist):
+                #remove from types
+                final_types.append(t)
+        except:
+            continue
     
-    print("Remaining Types")
-    print(final_types)
     #Go through the dataframe and drop all rows that have a type that is not in the list
     for index, row in df.iterrows():
         if row[colname] not in final_types:
