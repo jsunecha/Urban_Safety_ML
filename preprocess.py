@@ -114,13 +114,22 @@ def main():
 
     distributed_df = []
 
-    original_df = pd.read_csv("san_francisco.csv")
+    filename = "san_jose"
+    original_df = pd.read_csv(filename+".csv")
+
     print(original_df.shape)
+
     #Split the length of the dataframe into 100 parts
-    for i in range(0, 100):
-        distributed_df.append(original_df.iloc[i*len(original_df)//100:(i+1)*len(original_df)//100])
 
+    counter = 1
+    for i in range(500, 0, -1):
+        if len(original_df)%i == 0:
+            counter = i
+            break
 
+    for i in range(0, len(original_df)-counter, counter):
+        distributed_df.append(original_df[i:i+counter])
+        
     new_distributed_df = []
     threads = []
     for frame in distributed_df:
@@ -132,10 +141,14 @@ def main():
         result = t.join()
         new_distributed_df.append(result)
 
+
     #Add all the dataframes together from distributed_df list
     df = pd.concat(new_distributed_df, ignore_index=False)
     print(df.shape)
-    df.to_csv("updated_sanfrancisco.csv", index=True)
+
+
+    #Save the dataframe to a csv file
+    df.to_csv("processed"+filename+".csv", index=True)
 
 
     # record the end time
@@ -146,36 +159,6 @@ def main():
 
     # print the elapsed time
     print(f"Elapsed time: {elapsed_time} seconds")
-    return
-
-    for index, row in sanjose.iterrows():
-
-        #Get the coordinates
-        row = get_coords(row)
-
-        sanjose.at[index, 'LAT'] = row['LAT']
-        sanjose.at[index, 'LNG'] = row['LNG']
-        #Wait 0.5 seconds to avoid overloading the API
-        print(sanjose.columns)
-        time.sleep(0.5)
-
-        if index == 5:
-            break
-        
-        
-
-    print(sanjose.columns)
-
-    #Print how many rows and columns
-    print(sanjose.shape)
-
-    #Display the first 5 rows
-    print(sanjose.head())
-
-
-    #Save the dataframe to a csv file
-    sanjose.to_csv("updated_sanjose_policecalls2023.csv", index=True)
-
 
 
 

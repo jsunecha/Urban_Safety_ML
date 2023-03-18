@@ -4,12 +4,12 @@ import time
 import pandas as pd
 import numpy as np
 
-
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 import time
 import modal
+import datetime
 
 
 image=(modal.Image.debian_slim()
@@ -23,9 +23,31 @@ image=(modal.Image.debian_slim()
         "numpy",
         "requests",
         "googlemaps",
+        "google-cloud-storage"
     ))
 
 stub = modal.Stub(image=image)  
+
+@stub.function(secret=modal.Secret.from_name("my-googlecloud-secret"))
+def upload_data(df, location, dir):
+    from google.cloud import storage
+    from google.oauth2 import service_account
+    import json
+
+    service_account_info = json.loads(os.environ["SERVICE_ACCOUNT_JSON"])
+    credentials = service_account.Credentials.from_service_account_info(service_account_info)
+    client = storage.Client(credentials=credentials)
+
+    export_bucket = client.get_bucket("location-policecall-dataset")
+
+    #Upload dataframe to cloud storage service
+    df.to_csv()
+
+    export_bucket.blob(dir+"/"+location+".csv").upload_from_string(df.to_csv(), content_type="text/csv")
+
+    print(dir+"/"+location+".csv", "uploaded to cloud storage")
+
+
 
 @stub.function()
 def retain_columns(df):
@@ -97,6 +119,8 @@ def get_coords(row):
     row.append(str(lat))
     row.append(str(lng))
 
+    time.sleep(2)
+
     return row
 
 
@@ -108,13 +132,24 @@ def main():
 
     distributed_df = []
 
-    original_df = pd.read_csv("san_francisco.csv")
-    print(original_df.shape)
-    time.sleep(3)
-    #Split the length of the dataframe into 100 parts
-    for i in range(0, 100):
-        distributed_df.append(original_df.iloc[i*len(original_df)//100:(i+1)*len(original_df)//100])
+    filename = "san_jose"
+    original_df = pd.read_csv(filename+".csv")
 
+    upload_data.call(original_df, filename, "raw-dataset")
+
+    print(original_df.shape)
+
+    #Split the length of the dataframe into 100 parts
+
+    counter = 1
+    for i in range(500, 0, -1):
+        if len(original_df)%i == 0:
+            counter = i
+            break
+
+    for i in range(0, len(original_df)-counter, counter):
+        distributed_df.append(original_df[i:i+counter])
+        
 
     new_distributed_df = []
     for results in retain_columns.map(distributed_df):
@@ -124,8 +159,48 @@ def main():
     #Add all the dataframes together from distributed_df list
     df = pd.concat(new_distributed_df, ignore_index=False)
     print(df.shape)
-    df.to_csv("updated_sanfrancisco_policecalls2023.csv", index=True)
 
+    LL = ("LATITUDE", "LONGITUDE", "LAT", "LNG")
+
+    if not any(x in df.columns for x in LL):
+        #Convert df to list
+        list_df = df.values.tolist()
+
+        # #Adding the new columns
+        columns_df = df.columns.tolist()
+        columns_df.append("LAT")
+        columns_df.append("LNG")
+
+        templist = list()
+
+        #Find the biggest whole number that divides evenly, but is smaller or equal to 50 for the number len(list_sanjose)
+        #This is to avoid overloading the API
+        counter = 1
+        for i in range(50, 0, -1):
+            if len(list_df)%i == 0:
+                counter = i
+                break
+
+        for x in range(0, len(list_df)-counter, counter):
+            templist += list(get_coords.map(list_df[x:x+counter]))
+            print(len(templist))
+            time.sleep(1)
+        
+
+        final_df = pd.DataFrame(templist, columns=columns_df)
+            
+
+    print(final_df.columns)
+
+    #Print how many rows and columns
+    print(final_df.shape)
+
+    #Display the first 5 rows
+    print(final_df.head())
+
+    #Save the dataframe to a csv file
+    final_df.to_csv("processed"+filename+".csv", index=True)
+    upload_data.call(final_df, "processed_"+filename, "processed-dataset")
 
     # record the end time
     end_time = time.time()
@@ -135,46 +210,4 @@ def main():
 
     # print the elapsed time
     print(f"Elapsed time: {elapsed_time} seconds")
-    return
-
-    #Convert df to list
-    list_sanjose = sanjose.values.tolist()
-
-    # #Adding the new columns
-    columns_sanjose = sanjose.columns.tolist()
-    columns_sanjose.append("LAT")
-    columns_sanjose.append("LNG")
-
-    templist = list()
-
-    #Find the biggest whole number that divides evenly, but is smaller or equal to 50 for the number len(list_sanjose)
-    #This is to avoid overloading the API
-    counter = 1
-    for i in range(50, 0, -1):
-        if len(list_sanjose)%i == 0:
-            counter = i
-            break
-
-    for x in range(0, len(list_sanjose)-counter, counter):
-        templist += list(get_coords.map(list_sanjose[x:x+counter]))
-        print(len(templist))
-        time.sleep(1)
-    
-    #print(len(templist[0]))
-    time.sleep(3)
-
-    sanjose = pd.DataFrame(templist, columns=columns_sanjose)
-        
-
-    print(sanjose.columns)
-
-    #Print how many rows and columns
-    print(sanjose.shape)
-
-    #Display the first 5 rows
-    print(sanjose.head())
-
-    #Save the dataframe to a csv file
-    sanjose.to_csv("updated_sanjose_policecalls2023.csv", index=True)
-
 
