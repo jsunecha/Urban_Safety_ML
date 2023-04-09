@@ -4,6 +4,19 @@ scikit-learn
 googlemaps
 google-cloud-storage
 python-dotenv
+pmdarima
+torch 
+torchvision 
+torchaudio
+shapely
+seaborn
+
+#Geospatial libraries
+gdal
+geopandas
+geoplot
+contextily
+
 
 #If you are using modal, uncomment the following line
 #modal-client

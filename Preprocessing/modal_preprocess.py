@@ -103,6 +103,9 @@ def retain_columns(df):
     #Drop all rows that have a NaN value
     df = df.dropna()
 
+    #Uppercase all the column names
+    df.columns = map(str.upper, df.columns)
+
     return df
 
 @stub.function(timeout=10000,secret=modal.Secret.from_name("my-google-maps"))
@@ -126,7 +129,6 @@ def get_coords(row):
 
 @stub.local_entrypoint()
 def main():
-
     # record the start time
     start_time = time.time()
 
@@ -140,7 +142,7 @@ def main():
     print(original_df.shape)
 
     #Split the length of the dataframe into 100 parts
-
+    
     counter = 1
     for i in range(500, 0, -1):
         if len(original_df)%i == 0:
@@ -159,6 +161,9 @@ def main():
     #Add all the dataframes together from distributed_df list
     df = pd.concat(new_distributed_df, ignore_index=False)
     print(df.shape)
+
+    #Upload the dataframe to cloud storage service
+    upload_data.call(df, "processed_"+filename, "processed-dataset")
 
     LL = ("LATITUDE", "LONGITUDE", "LAT", "LNG")
 
