@@ -8,14 +8,9 @@ pmdarima
 torch 
 torchvision 
 torchaudio
-shapely
-seaborn
 
 #Geospatial libraries
-gdal
-geopandas
-geoplot
-contextily
+folium
 
 
 #If you are using modal, uncomment the following line

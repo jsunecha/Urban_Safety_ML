@@ -16,7 +16,7 @@ image=(modal.Image.debian_slim()
     .apt_install("curl")
     .run_commands(
         "apt-get update",
-        "curl -O https://raw.githubusercontent.com/TruthQuestWeb/ml-model/main/train.csv",
+       
     ).pip_install(
         "pandas",
         "scikit-learn",

@@ -43,7 +43,7 @@ columns =['Larceny Theft', 'Assault', 'Robbery', 'Stolen Property', 'Motor Vehic
 pd2_old['Incident Category'] = pd2_old['Incident Category'].apply(lambda x: x.replace('Human Trafficking (A), Commercial Sex Acts', 'KIDNAPPING'))
 pd2_old['Incident Category'] = pd2_old['Incident Category'].apply(lambda x: x.replace('Human Trafficking, Commercial Sex Acts', 'KIDNAPPING'))
 pd2_old['Incident Category'] = pd2_old['Incident Category'].apply(lambda x: x.replace('Human Trafficking (B), Involuntary Servitude', 'KIDNAPPING'))
-
+pd2_old['Incident Category'] = pd2_old['Incident Category'].apply(lambda x: x.replace('Motor Vehicle Theft?', 'Motor Vehicle Theft'))
 
 #Filter out all rows that are not in columns
 pd2_new = pd2_old[pd2_old['Incident Category'].isin(columns)]
@@ -89,6 +89,8 @@ print(pd2_new.head())
 pd_new = pd_new.append(pd2_new, ignore_index=True)
 print(pd_new.head())
 print(pd_new.shape)
+
+print(pd_new['Category'].unique())
 
 #Save to csv
 pd_new.to_csv("San_Francisco.csv", index=False)
