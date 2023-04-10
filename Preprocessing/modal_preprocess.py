@@ -129,6 +129,7 @@ def get_coords(row):
 
 @stub.local_entrypoint()
 def main():
+
     # record the start time
     start_time = time.time()
 

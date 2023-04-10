@@ -2,3 +2,5 @@
 .env
 *.csv
 *.zip
+*.html
+*.pt

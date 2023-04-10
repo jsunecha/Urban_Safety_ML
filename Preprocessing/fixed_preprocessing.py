@@ -87,10 +87,26 @@ print(pd2_new.head())
 
 #Combine pd_new and pd2_new
 pd_new = pd_new.append(pd2_new, ignore_index=True)
+#Seprate Date and Time into two columns
+pd_new['Date'] = pd_new['Datetime'].dt.date
+pd_new['Time'] = pd_new['Datetime'].dt.time
+
+#Drop Datetime column
+pd_new = pd_new.drop(columns=['Datetime'])
+#Reorder the columns by Date, Time, Category, latitude, longitude
+pd_new = pd_new[['Date', 'Time', 'Category', 'Latitude', 'Longitude']]
+
+
+
 print(pd_new.head())
 print(pd_new.shape)
 
 print(pd_new['Category'].unique())
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 3ec5449 (Added lSTM)
 #Save to csv
 pd_new.to_csv("San_Francisco.csv", index=False)
