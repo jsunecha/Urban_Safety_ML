@@ -10,25 +10,21 @@ import folium
 
 # Load and preprocess data
 data = pd.read_csv("San_Francisco.csv")
-<<<<<<< HEAD
-data['Datetime'] = pd.to_datetime(data['Datetime']).astype(int) / 10**9
-scaler = MinMaxScaler()
-data[['Datetime', 'Latitude', 'Longitude']] = scaler.fit_transform(data[['Datetime', 'Latitude', 'Longitude']])
-encoder = LabelEncoder()
-data['Category'] = encoder.fit_transform(data['Category'])
-=======
 
 data["Date"] = pd.to_datetime(data["Date"]).astype(int) / 10**9
 data["Time"] = pd.to_datetime(data["Time"]).astype(int) / 10**9
 
-scaler = MinMaxScaler()
-data[["Date", "Time", "Latitude", "Longitude"]] = scaler.fit_transform(
-    data[["Date", "Time", "Latitude", "Longitude"]]
-)
 encoder = LabelEncoder()
 data["Category"] = encoder.fit_transform(data["Category"])
+data["Part_of_Day"] = encoder.fit_transform(data["Part_of_Day"])
+data["Day_of_Week"] = encoder.fit_transform(data["Day_of_Week"])
 
->>>>>>> 3ec5449 (Added lSTM)
+scaler = MinMaxScaler()
+data[["Date", "Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]] = scaler.fit_transform(
+    data[["Date", "Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]]
+)
+
+#Date,Time,Day_of_Week,Part_of_Day,Category,Latitude,Longitude
 
 # Prepare dataset and dataloader
 class CrimeDataset(Dataset):
@@ -39,20 +35,13 @@ class CrimeDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-<<<<<<< HEAD
-        features = torch.tensor(self.data.iloc[idx, [0, 2, 3]].values, dtype=torch.float)
-        label = torch.tensor(self.data.iloc[idx, 1], dtype=torch.long)
-        return features, label
-
-=======
         features = torch.tensor(
-            self.data.iloc[idx, [0, 1, 3, 4]].values, dtype=torch.float
+            self.data.iloc[idx, [0, 1, 2, 3, 5, 6]].values, dtype=torch.float
         )
-        label = torch.tensor(self.data.iloc[idx, 2], dtype=torch.long)
+        label = torch.tensor(self.data.iloc[idx, 4], dtype=torch.long)
         return features, label
 
 
->>>>>>> 3ec5449 (Added lSTM)
 dataset = CrimeDataset(data)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
@@ -66,31 +55,19 @@ train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 test_dataset = CrimeDataset(test_data)
 test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 3ec5449 (Added lSTM)
 # Define LSTM model
 class CrimeLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
         super(CrimeLSTM, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-<<<<<<< HEAD
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, num_classes)
-
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)
-=======
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
         self.fc = nn.Linear(hidden_size * 2, num_classes)  # Multiply hidden_size by 2 since it's a bidirectional LSTM
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size)  # Multiply num_layers by 2 for bidirectional LSTM
         c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size)  # Multiply num_layers by 2 for bidirectional LSTM
->>>>>>> 3ec5449 (Added lSTM)
 
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])
@@ -99,17 +76,10 @@ class CrimeLSTM(nn.Module):
 
 
 # Model parameters
-<<<<<<< HEAD
-input_size = 3
+input_size = 6
 hidden_size = 64
-num_layers = 3 
-num_classes = len(data['Category'].unique())
-=======
-input_size = 4
-hidden_size = 128
-num_layers = 10
+num_layers = 5
 num_classes = len(data["Category"].unique())
->>>>>>> 3ec5449 (Added lSTM)
 
 # Initialize model, loss function, and optimizer
 model = CrimeLSTM(input_size, hidden_size, num_layers, num_classes)
@@ -118,20 +88,12 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 
 # Train the model
-<<<<<<< HEAD
-num_epochs = 5
-=======
-num_epochs = 100
->>>>>>> 3ec5449 (Added lSTM)
+num_epochs = 3
 
 for epoch in range(num_epochs):
     for i, (features, labels) in enumerate(dataloader):
         features = features.unsqueeze(1)
-<<<<<<< HEAD
-        
-=======
 
->>>>>>> 3ec5449 (Added lSTM)
         # Forward pass
         outputs = model(features)
         loss = criterion(outputs, labels)
@@ -141,17 +103,12 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
-<<<<<<< HEAD
-        if (i+1) % 10 == 0:
-            print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch+1, num_epochs, i+1, len(dataloader), loss.item()))
-=======
         if (i + 1) % 10 == 0:
             print(
                 "Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}".format(
                     epoch + 1, num_epochs, i + 1, len(dataloader), loss.item()
                 )
             )
->>>>>>> 3ec5449 (Added lSTM)
 
 # Test the model
 model.eval()
@@ -169,40 +126,26 @@ with torch.no_grad():
 # Calculate accuracy, confusion matrix, and classification report
 accuracy = accuracy_score(all_labels, all_predictions)
 conf_matrix = confusion_matrix(all_labels, all_predictions)
-<<<<<<< HEAD
-class_report = classification_report(all_labels, all_predictions, target_names=encoder.classes_, zero_division=1)
-=======
 class_report = classification_report(
     all_labels, all_predictions, target_names=encoder.classes_, zero_division=1
 )
->>>>>>> 3ec5449 (Added lSTM)
 
 
 print("Accuracy: {:.2f}".format(accuracy))
 print("Confusion Matrix:\n", conf_matrix)
 print("Classification Report:\n", class_report)
 
-<<<<<<< HEAD
-# Create a function to inverse_transform the data
-def inverse_transform_data(data, scaler, encoder):
-    inv_data = data.copy()
-    inv_data[['Datetime', 'Latitude', 'Longitude']] = scaler.inverse_transform(data[['Datetime', 'Latitude', 'Longitude']])
-    inv_data['Category'] = encoder.inverse_transform(data['Category'])
-    return inv_data
-
-=======
 
 # Create a function to inverse_transform the data
 def inverse_transform_data(data, scaler, encoder):
     inv_data = data.copy()
-    inv_data[["Date", "Time", "Latitude", "Longitude"]] = scaler.inverse_transform(
-        data[["Date", "Time", "Latitude", "Longitude"]]
+    inv_data[["Date", "Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]] = scaler.inverse_transform(
+        data[["Date", "Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]]
     )
     inv_data["Category"] = encoder.inverse_transform(data["Category"])
     return inv_data
 
 
->>>>>>> 3ec5449 (Added lSTM)
 # Inverse_transform test_data
 test_data_inv = inverse_transform_data(test_data, scaler, encoder)
 
@@ -216,27 +159,16 @@ from folium.plugins import MarkerCluster
 # ...
 
 # Create a map centered at the mean latitude and longitude
-<<<<<<< HEAD
-m = folium.Map(location=[test_data_inv['Latitude'].mean(), test_data_inv['Longitude'].mean()], zoom_start=12)
-=======
 m = folium.Map(
     location=[test_data_inv["Latitude"].mean(), test_data_inv["Longitude"].mean()],
     zoom_start=12,
 )
->>>>>>> 3ec5449 (Added lSTM)
 
 # Create a MarkerCluster
 marker_cluster = MarkerCluster().add_to(m)
 
 counter = 0
 for idx, row in test_data_inv.iterrows():
-<<<<<<< HEAD
-    if row['Category'] == encoder.inverse_transform([all_predictions[counter]])[0]:
-        marker_color = 'green'
-    else:
-        marker_color = 'red'
-    folium.Marker([row['Latitude'], row['Longitude']], popup=row['Category'], icon=folium.Icon(color=marker_color)).add_to(marker_cluster)
-=======
     if row["Category"] == encoder.inverse_transform([all_predictions[counter]])[0]:
         marker_color = "green"
     else:
@@ -246,7 +178,6 @@ for idx, row in test_data_inv.iterrows():
         popup=row["Category"],
         icon=folium.Icon(color=marker_color),
     ).add_to(marker_cluster)
->>>>>>> 3ec5449 (Added lSTM)
     counter += 1
 
 

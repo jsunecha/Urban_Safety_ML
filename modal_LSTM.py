@@ -21,10 +21,14 @@ stub = modal.Stub(
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 @stub.function(gpu=modal.gpu.A10G(count=4), timeout=60*60*6)
 =======
 @stub.function(gpu=modal.gpu.T4(count=4), timeout=60 * 60 * 6)
 >>>>>>> 3ec5449 (Added lSTM)
+=======
+@stub.function(gpu=modal.gpu.A10G(count=4), timeout=60 * 60 * 6)
+>>>>>>> a9f5826 (Updated LSTM Accuracy still low)
 def gpu_function(data):
     import subprocess
 
@@ -55,9 +59,8 @@ def gpu_function(data):
 
     # Column Date to Datetime
     data["Date"] = pd.to_datetime(data["Date"]).astype(int) / 10**9
+    data["Time"] = pd.to_datetime(data["Time"], format="%H:%M").astype(int) / 10**9
 
-    # Column TIme to Datetime
-    data["Time"] = pd.to_datetime(data["Time"]).astype(int) / 10**9
 
     scaler = MinMaxScaler()
     data[["Date", "Time", "Latitude", "Longitude"]] = scaler.fit_transform(
@@ -106,18 +109,14 @@ def gpu_function(data):
             super(CrimeLSTM, self).__init__()
             self.hidden_size = hidden_size
             self.num_layers = num_layers
-            self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-            self.fc = nn.Linear(hidden_size, num_classes)
+            self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
+            self.fc = nn.Linear(hidden_size * 2, num_classes)  # Multiply hidden_size by 2 since it's a bidirectional LSTM
 
         def forward(self, x):
-            # Initialize hidden and cell states
-            h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-            c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+            h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)  # Multiply num_layers by 2 for bidirectional LSTM
+            c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)  # Multiply num_layers by 2 for bidirectional LSTM
 
-            # Forward propagate the LSTM
             out, _ = self.lstm(x, (h0, c0))
-
-            # Decode the hidden state of the last time step
             out = self.fc(out[:, -1, :])
             return out
 <<<<<<< HEAD
@@ -126,12 +125,18 @@ def gpu_function(data):
 
 >>>>>>> 3ec5449 (Added lSTM)
     # Model parameters
+<<<<<<< HEAD
     input_size = 3
     hidden_size = 64
     num_layers = 2
 <<<<<<< HEAD
     num_classes = len(data['Category'].unique())
 =======
+=======
+    input_size = 4
+    hidden_size = 128
+    num_layers = 5
+>>>>>>> a9f5826 (Updated LSTM Accuracy still low)
     num_classes = len(data["Category"].unique())
 >>>>>>> 3ec5449 (Added lSTM)
 
@@ -154,7 +159,7 @@ def gpu_function(data):
 =======
 >>>>>>> 3ec5449 (Added lSTM)
     # Train the model
-    num_epochs = 100
+    num_epochs = 10
 
     for epoch in range(num_epochs):
         for i, (features, labels) in enumerate(dataloader):
