@@ -129,6 +129,10 @@ with torch.no_grad():
         all_labels.extend(labels.numpy())
         all_predictions.extend(predicted.numpy())
 
+
+# Save the trained model
+torch.save(model.state_dict(), "model.ckpt")
+
 # Calculate accuracy, confusion matrix, and classification report
 all_labels_np = np.array(all_labels)
 all_predictions_np = np.array(all_predictions)
@@ -156,11 +160,6 @@ def inverse_transform_data(data, scaler, encoder, category=None):
 
 # Inverse_transform test_data
 test_data_inv = inverse_transform_data(test_data, scaler, encoder, category=all_predictions)
-
-
-# Save the trained model
-model_path = "lstm_model.pt"
-torch.save(model.state_dict(), model_path)
 
 
 from folium.plugins import MarkerCluster
