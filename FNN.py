@@ -11,9 +11,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 import folium
 from tqdm import tqdm
-
-# Load and preprocess data
 data = pd.read_csv("San_Francisco.csv")
+# Count the number of examples in each category
+category_counts = data["Category"].value_counts()
+
+# Print the counts for each category
+print(category_counts)
+# Load and preprocess data
+
 
 data["Time"] = pd.to_datetime(data["Time"]).astype(int) / 10**9
 
@@ -29,7 +34,6 @@ scaler = MinMaxScaler()
 data[["Time", "Day_of_Week", "Part_of_Day", "Latitude", "Longitude"]] = scaler.fit_transform(
     data[["Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]]
 )
-
 # Prepare dataset and dataloader
 class CrimeDataset(Dataset):
     def __init__(self, data):
@@ -62,8 +66,6 @@ test_dataset = CrimeDataset(test_data)
 
 train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-
-
 # Define Feedforward Neural Network
 class CrimeNet(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
@@ -93,9 +95,8 @@ model = CrimeNet(input_size, hidden_size, num_classes).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-
 # Train the model
-num_epochs = 2
+num_epochs = 5
 
 for epoch in range(num_epochs):
     for i, (features, labels) in enumerate(dataloader):
@@ -115,7 +116,6 @@ for epoch in range(num_epochs):
             print(
                 f"Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(dataloader)}], Loss: {loss.item():.4f}"
             )
-
 # Test the model
 model.eval()
 all_labels = []
@@ -123,43 +123,26 @@ all_predictions = []
 
 with torch.no_grad():
     for features, labels in test_dataloader:
-        features = features.unsqueeze(1)
+        features = features.to(device)
+        labels = labels.to(device)
+
         outputs = model(features)
         _, predicted = torch.max(outputs.data, 1)
-        all_labels.extend(labels.numpy())
-        all_predictions.extend(predicted.numpy())
+
+        all_labels.extend(labels.cpu().numpy())
+        all_predictions.extend(predicted.cpu().numpy())
 
 
 # Save the trained model
 torch.save(model.state_dict(), "model.ckpt")
-
 # Calculate accuracy, confusion matrix, and classification report
-all_labels_np = np.array(all_labels)
-all_predictions_np = np.array(all_predictions)
-accuracy = accuracy_score(all_labels_np, all_predictions_np)
-
 conf_matrix = confusion_matrix(all_labels, all_predictions)
 class_report = classification_report(all_labels, all_predictions)
+accuracy = accuracy_score(all_labels, all_predictions)
 
-print("Accuracy: {:.2f}".format(accuracy))
 print("Confusion Matrix:\n", conf_matrix)
 print("Classification Report:\n", class_report)
-
-
-# Create a function to inverse_transform the data
-def inverse_transform_data(data, scaler, encoder, category=None):
-    inv_data = data.copy()
-    inv_data[[ "Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]] = scaler.inverse_transform(
-        data[["Time", "Day_of_Week", "Part_of_Day","Latitude", "Longitude"]]
-    )
-    if category is not None:
-        inv_data["Category"] = encoder.inverse_transform(category)
-    return inv_data
-
-
-
-# Inverse_transform test_data
-test_data_inv = inverse_transform_data(test_data, scaler, encoder, category=all_predictions)
+print("Accuracy:", accuracy)
 
 
 from folium.plugins import MarkerCluster
