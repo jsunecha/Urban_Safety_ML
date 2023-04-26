@@ -129,16 +129,17 @@ def get_coords(row):
 
 @stub.local_entrypoint()
 def main():
+
     # record the start time
     start_time = time.time()
 
     distributed_df = []
 
-    filename = "san_jose"
+    filename = "San_Francisco"
     original_df = pd.read_csv(filename+".csv")
 
-    upload_data.call(original_df, filename, "raw-dataset")
-
+    upload_data.call(original_df, filename, "processed-dataset")
+    return
     print(original_df.shape)
 
     #Split the length of the dataframe into 100 parts

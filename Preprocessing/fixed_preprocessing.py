@@ -87,10 +87,49 @@ print(pd2_new.head())
 
 #Combine pd_new and pd2_new
 pd_new = pd_new.append(pd2_new, ignore_index=True)
+#Seprate Date and Time into two columns
+pd_new['Date'] = pd_new['Datetime'].dt.date
+pd_new['Time'] = pd_new['Datetime'].dt.time
+
+#Drop Datetime column
+pd_new = pd_new.drop(columns=['Datetime'])
+
+def categorize_part_of_day(time_obj):
+    hour = time_obj.hour
+    if 5 <= hour < 12:
+        return 'morning'
+    elif 12 <= hour < 17:
+        return 'afternoon'
+    elif 17 <= hour < 21:
+        return 'evening'
+    else:
+        return 'night'
+
+# Assuming you have a DataFrame called 'data' with a column named 'Time'
+pd_new['Part_of_Day'] = pd_new['Time'].apply(categorize_part_of_day)
+
+def get_day_of_week(date_str):
+    date_obj = pandas.to_datetime(date_str)
+    return date_obj.day_name()
+
+# Assuming you have a DataFrame called 'data' with a column named 'Date'
+pd_new['Day_of_Week'] = pd_new['Date'].apply(get_day_of_week)
+
+
+#Reorder the columns by Date, Time, Category, latitude, longitude
+pd_new = pd_new[['Date', 'Time', 'Day_of_Week', 'Part_of_Day', 'Category', 'Latitude', 'Longitude']]
+
+
+
 print(pd_new.head())
 print(pd_new.shape)
 
 print(pd_new['Category'].unique())
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 3ec5449 (Added lSTM)
 #Save to csv
 pd_new.to_csv("San_Francisco.csv", index=False)
